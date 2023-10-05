@@ -1,132 +1,108 @@
-let SERVER_NAME = 'user-api'
-let PORT = 3000;
-let HOST = '127.0.0.1';
+let SERVER_NAME = "programnode";
+let PORT = 5000;
+let HOST = "127.0.0.1";
 
-let errors = require('restify-errors');
-let restify = require('restify')
+//Counter for the GET and POST request
+let totalGetCounter = 0;
+let totalPostCounter = 0;
 
-  // Get a persistence engine for the users
-  , usersSave = require('save')('users')
+let error = require("restify-errors");
+let restify = require("restify"),
+  
+  productsSaved = require("save")("products"),
+  // Creating the restify server
+  server = restify.createServer({ name: SERVER_NAME });
 
-  // Create the restify server
-  , server = restify.createServer({ name: SERVER_NAME})
-
-  server.listen(PORT, HOST, function () {
-  console.log('Server %s listening at %s', server.name, server.url)
-  console.log('**** Resources: ****')
-  console.log('********************')
-  console.log(' /users')
-  console.log(' /users/:id')  
-})
+server.listen(PORT, HOST, function () {
+  console.log("Server %s listening at %s", server.name, server.url);
+  console.log("**** Resources: ****");
+  console.log("********************");
+  console.log("Endpoints: %s method: GET, POST, DELETE ", server.url);
+  console.log("/products");
+  console.log("/products/:id");
+});
 
 server.use(restify.plugins.fullResponse());
 server.use(restify.plugins.bodyParser());
 
-// Get all users in the system
-server.get('/users', function (req, res, next) {
-  console.log('GET /users params=>' + JSON.stringify(req.params));
+// Getting the products in the system
+server.get("/products", function (req, res, next) {
+  console.log("********************");
+  console.log("products GET: received request");
+  console.log("GET /products params=>" + JSON.stringify(req.params));
+  totalGetCounter++;
 
-  // Find every entity within the given collection
-  usersSave.find({}, function (error, users) {
-``
-    // Return all of the users in the system
-    res.send(users)
-  })
-})
+  // Finding out all data in the  collection
+  productsSaved.find({}, function (error, products) {
+    // Return all products in the system
+    res.send(products);
+    console.log(
+      "Processed Count--> GET:",
+      totalGetCounter + " , " + "POST:",
+      totalPostCounter
+    );
+  });
+  console.log("Available products details");
+});
 
-// Get a single user by their user id
-server.get('/users/:id', function (req, res, next) {
-  console.log('GET /users/:id params=>' + JSON.stringify(req.params));
-
-  // Find a single user by their id within save
-  usersSave.findOne({ _id: req.params.id }, function (error, user) {
-
-    // If there are any errors, pass them to next in the correct format
-    if (error) return next(new Error(JSON.stringify(error.errors)))
-
-    if (user) {
-      // Send the user if no issues
-      res.send(user)
-    } else {
-      // Send 404 header if the user doesn't exist
-      res.send(404)
+// Creating a new product
+server.post("/products", function (req, res, next) {
+    console.log("**********************");
+    console.log("products POST: received request");
+    console.log("POST /products params=>" + JSON.stringify(req.params));
+    console.log("POST / products body=>" + JSON.stringify(req.body));
+    totalPostCounter++;
+  
+    // Ensuring all manadatory fields are filled
+    if (req.body.name === undefined) {
+      // If there are any errors, pass them to next in the correct format
+      return next(new error.BadRequestError("Please Enter Name"));
     }
-  })
-})
-
-// Create a new user
-server.post('/users', function (req, res, next) {
-  console.log('POST /users params=>' + JSON.stringify(req.params));
-  console.log('POST /users body=>' + JSON.stringify(req.body));
-
-  // validation of manadatory fields
-  if (req.body.name === undefined ) {
-    // If there are any errors, pass them to next in the correct format
-    return next(new errors.BadRequestError('name must be supplied'))
-  }
-  if (req.body.age === undefined ) {
-    // If there are any errors, pass them to next in the correct format
-    return next(new errors.BadRequestError('age must be supplied'))
-  }
-
-  let newUser = {
-		name: req.body.name, 
-		age: req.body.age
-	}
-
-  // Create the user using the persistence engine
-  usersSave.create( newUser, function (error, user) {
-
-    // If there are any errors, pass them to next in the correct format
-    if (error) return next(new Error(JSON.stringify(error.errors)))
-
-    // Send the user if no issues
-    res.send(201, user)
-  })
-})
-
-// Update a user by their id
-server.put('/users/:id', function (req, res, next) {
-  console.log('POST /users params=>' + JSON.stringify(req.params));
-  console.log('POST /users body=>' + JSON.stringify(req.body));
-  // validation of manadatory fields
-  if (req.body.name === undefined ) {
-    // If there are any errors, pass them to next in the correct format
-    return next(new errors.BadRequestError('name must be supplied'))
-  }
-  if (req.body.age === undefined ) {
-    // If there are any errors, pass them to next in the correct format
-    return next(new errors.BadRequestError('age must be supplied'))
-  }
+    if (req.body.price === undefined) {
+      // If there are any errors, pass them to next in the correct format
+      return next(new error.BadRequestError("Please Enter Price"));
+    }
+    if (req.body.quantity === undefined) {
+      // If there are any errors, pass them to next in the correct format
+      return next(new error.BadRequestError("Please Enter Quantity"));
+    }
   
-  let newUser = {
-		_id: req.body.id,
-		name: req.body.name, 
-		age: req.body.age
-	}
+    let newProduct = {
+      productId: req.body.productId,
+      name: req.body.name,
+      price: req.body.price,
+      quantity: req.body.quantity,
+    };
+    //   Create the product using the presistence engine
+    productsSaved.create(newProduct, function (error, product) {
+      // Pass any errors to next in the correct format
+      if (error) return next(new Error(JSON.stringify(error.errors)));
   
-  // Update the user with the persistence engine
-  usersSave.update(newUser, function (error, user) {
-    // If there are any errors, pass them to next in the correct format
-    if (error) return next(new Error(JSON.stringify(error.errors)))
-
-    // Send a 200 OK response
-    res.send(200)
-  })
-})
-
-// Delete user with the given id
-server.del('/users/:id', function (req, res, next) {
-  console.log('POST /users params=>' + JSON.stringify(req.params));
-  // Delete the user with the persistence engine
-  usersSave.delete(req.params.id, function (error, user) {
-
-    // If there are any errors, pass them to next in the correct format
-    if (error) return next(new Error(JSON.stringify(error.errors)))
-
-    // Send a 204 response
-    res.send(204)
-  })
-})
-
-
+      // Send product if all conditions are met
+      res.send(201, product);
+      console.log(
+        "Processed Request Count--> GET:",
+        totalGetCounter + " , " + "POST:",
+        totalPostCounter
+      );
+    });
+    console.log("Product and product details added successfully");
+  });
+  
+  // Delete all products
+server.del("/products", function (req, res, next) {
+    console.log("DELETE /products params=>" + JSON.stringify(req.params));
+  
+    // Delete all products from the persistence engine
+    productsSaved.deleteMany({}, function (error) {
+      console.log(`${req.method} ${req.url}: sending response`);
+  
+      // Pass any errors to next in the correct format
+      if (error) {
+        return next(new Error(JSON.stringify(error.errors)));
+      }
+      // Send a success response showing products deleted
+      res.send(204);
+      console.log("All products deleted");
+    });
+  }); 
